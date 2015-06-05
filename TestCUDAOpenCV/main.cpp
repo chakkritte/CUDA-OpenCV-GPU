@@ -8,6 +8,10 @@
 #include "opencv2/contrib/contrib.hpp"
 #include <opencv2/ocl/ocl.hpp>
 
+#define haarcascade_frontalface_alt2 "haarcascade_frontalface_alt2.xml"
+#define TEST_IMAGE "MyImages\\111.jpg"
+#define SIZE 20
+
 #ifdef _DEBUG
 #pragma comment(lib, "opencv_core2411d.lib")
 #pragma comment(lib, "opencv_imgproc2411d.lib")   //MAT processing
@@ -28,7 +32,7 @@ using namespace cv::gpu;
 using namespace cv::ocl;
 
 /** Global variables */
-String face_cascade_name = "haarcascade_frontalface_alt2.xml";
+String face_cascade_name = haarcascade_frontalface_alt2;
 CascadeClassifier face_cascade;
 CascadeClassifier_GPU face_cascade_gpu;
 
@@ -39,8 +43,6 @@ string window_namegpu_cuda = "GPU CUDA- Face detection";
 
 RNG rng(12345);
 
-float TakeTime;
-unsigned long Atime, Btime;
 
 struct getRect { Rect operator ()(const CvAvgComp& e) const { return e.rect; } };
 
@@ -50,13 +52,16 @@ void detectAndDisplayCPU(Mat& frame)
 	vector<Rect> faces;
 	Mat frame_gray;
 
+	float TakeTime;
+	unsigned long Atime, Btime;
+
 	cvtColor(frame, frame_gray, CV_BGR2GRAY);
 	equalizeHist(frame_gray, frame_gray);
 
 	Atime = getTickCount();
 
 	//-- Detect faces
-	face_cascade.detectMultiScale(frame_gray, faces, 1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(20, 20));
+	face_cascade.detectMultiScale(frame_gray, faces, 1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(SIZE, SIZE), Size(0, 0));
 
 	Btime = getTickCount();
 	TakeTime = (Btime - Atime) / getTickFrequency();
@@ -82,11 +87,18 @@ void detectAndDisplayGPUCUDA(Mat frame)
 	cvtColor(frame, frame_gray, CV_BGR2GRAY);
 	equalizeHist(frame_gray, frame_gray);
 
+	float TakeTime;
+	unsigned long Atime, Btime;
+
 	GpuMat faceBuf_gpu;
 	GpuMat GpuImg;
 	GpuImg.upload(frame_gray);
 	Atime = getTickCount();
-	int detectionNumber = face_cascade_gpu.detectMultiScale(GpuImg, faceBuf_gpu, 1.1, 2, Size(20, 20));
+	int detectionNumber = face_cascade_gpu.detectMultiScale(GpuImg, faceBuf_gpu, 1.1, 2, Size(SIZE, SIZE));
+
+	//detectionNumber = face_cascade_gpu.detectMultiScale(GpuImg, faceBuf_gpu, 1.2, (filterRects || findLargestObject) ? 4 : 0, Size(image.cols / 4, image.rows / 4));
+
+
 	Btime = getTickCount();
 	TakeTime = (Btime - Atime) / getTickFrequency();
 	printf("detected face(gpu version) =%d / %lf sec take.\n", detectionNumber, TakeTime);
@@ -99,7 +111,7 @@ void detectAndDisplayGPUCUDA(Mat frame)
 
 		for (int ji = 0; ji < detectionNumber; ++ji)
 		{
-			rectangle(frame, Point(faces[ji].x, faces[ji].y), Point(faces[ji].x + faces[ji].width, faces[ji].y + faces[ji].height), CV_RGB(255, 0, 0), 2);
+			rectangle(frame, Point(faces[ji].x, faces[ji].y), Point(faces[ji].x + faces[ji].width, faces[ji].y + faces[ji].height), CV_RGB(255, 255, 0), 4);
 		}
 	}
 
@@ -116,21 +128,16 @@ void detectAndDisplayOpenCL(Mat frame)
 }
 */
 
-void detectAndDraw(Mat& img,
-	cv::ocl::OclCascadeClassifier& cascade, CascadeClassifier&,
-	double scale)
+void detectAndDraw(Mat& img, cv::ocl::OclCascadeClassifier& cascade, CascadeClassifier&,double scale)
 {
+
+	float TakeTime;
+	unsigned long Atime, Btime;
+
 	int i = 0;
 	double t = 0;
 	vector<Rect> faces;
-	const static Scalar colors[] = { CV_RGB(0, 0, 255),
-		CV_RGB(0, 128, 255),
-		CV_RGB(0, 255, 255),
-		CV_RGB(0, 255, 0),
-		CV_RGB(255, 128, 0),
-		CV_RGB(255, 255, 0),
-		CV_RGB(255, 0, 0),
-		CV_RGB(255, 0, 255) };
+
 	cv::ocl::oclMat image(img);
 	cv::ocl::oclMat gray, smallImg(cvRound(img.rows / scale), cvRound(img.cols / scale), CV_8UC1);
 
@@ -142,8 +149,7 @@ void detectAndDraw(Mat& img,
 	MemStorage storage(cvCreateMemStorage(0));
 	//t = (double)cvGetTickCount();
 	Atime = getTickCount();
-	_objects = cascade.oclHaarDetectObjects(smallImg, storage, 1.1, 2, 0 | CV_HAAR_SCALE_IMAGE , Size(20, 20));
-
+	_objects = cascade.oclHaarDetectObjects(smallImg, storage, 1.1, 2, 0 | CV_HAAR_SCALE_IMAGE, Size(SIZE, SIZE), Size(0, 0));
 	Btime = getTickCount();
 
 	vector<CvAvgComp> vecAvgComp;
@@ -178,7 +184,7 @@ void detectAndDraw(Mat& img,
 			rectangle(img, faces[ji], CV_RGB(255, 0, 0), 4);
 		}
 	}
-	namedWindow(window_namegpu, WINDOW_AUTOSIZE);
+	//namedWindow(window_namegpu, WINDOW_AUTOSIZE);
 	imshow(window_namegpu, img);
 	//imwrite("gpu.jpg", img);
 }
@@ -203,7 +209,7 @@ int main(int argc, const char *argv[])
 	if (!face_cascade.load(face_cascade_name)){ printf("--(!)CPU Error loading\n"); return -1; };
 	//if (!eyes_cascade.load(eyes_cascade_name)){ printf("--(!)Error loading\n"); return -1; };
 	//cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
-	cv::Mat img = cv::imread("MyImages\\6.jpg");
+	Mat img = imread(TEST_IMAGE);
 	Mat imgCPU = img.clone();
 	Mat imgGPU = img.clone();
 	Mat imgGPUCUDA = img.clone();
@@ -218,7 +224,7 @@ int main(int argc, const char *argv[])
 	OclCascadeClassifier cascade_ocl;
 	CascadeClassifier  nestedCascade;
 	if (!cascade_ocl.load(face_cascade_name)){ printf("--(!)GPU OpenCL Error loading\n"); return -1; };
-	double scale = 1;
+	double scale = 1.0;
 	detectAndDraw(imgGPU, cascade_ocl, nestedCascade, scale);
 
 
