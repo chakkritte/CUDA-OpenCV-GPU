@@ -8,8 +8,9 @@
 #include "opencv2/contrib/contrib.hpp"
 #include <opencv2/ocl/ocl.hpp>
 
-#define haarcascade_frontalface_alt2 "haarcascade_frontalface_alt2.xml"
-#define TEST_IMAGE "MyImages\\111.jpg"
+#define haarcascade_DIR "haarcascades\\haarcascade_frontalface_alt2.xml"
+#define haarcascade_DIR_CUDA "haarcascades_cuda\\haarcascade_frontalface_alt2.xml"
+#define TEST_IMAGE "MyImages\\many.jpg"
 #define SIZE 20
 
 #ifdef _DEBUG
@@ -32,7 +33,8 @@ using namespace cv::gpu;
 using namespace cv::ocl;
 
 /** Global variables */
-String face_cascade_name = haarcascade_frontalface_alt2;
+String face_cascade_name = haarcascade_DIR;
+String face_cascade_name_CUDA = haarcascade_DIR_CUDA;
 CascadeClassifier face_cascade;
 CascadeClassifier_GPU face_cascade_gpu;
 
@@ -75,7 +77,7 @@ void detectAndDisplayCPU(Mat& frame)
 		}
 	}
 	//-- Show what you got
-	namedWindow(window_name, WINDOW_AUTOSIZE);
+	//namedWindow(window_name, WINDOW_AUTOSIZE);
 	imshow(window_name, frame);
 	//imwrite("cpu.jpg", frame);
 }
@@ -115,6 +117,7 @@ void detectAndDisplayGPUCUDA(Mat frame)
 		}
 	}
 
+	//imwrite("cuda.jpg", frame);
 	imshow(window_namegpu_cuda, frame);
 }
 
@@ -200,7 +203,9 @@ int main(int argc, const char *argv[])
 		return cerr << "No GPU found or the library is compiled without GPU support" << endl, -1;
 	}
 
-	//cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+	cv::gpu::printShortCudaDeviceInfo(cv::gpu::getDevice());
+
+	printf("\n");
 	//CvCapture* capture;
 	//Code use CPU
 
@@ -217,20 +222,20 @@ int main(int argc, const char *argv[])
 	detectAndDisplayCPU(imgCPU);
 
 	//Code use OpenCL
-
+	
 	DevicesInfo devices;
 	getOpenCLDevices(devices);
 	setDevice(devices[0]);
 	OclCascadeClassifier cascade_ocl;
 	CascadeClassifier  nestedCascade;
-	if (!cascade_ocl.load(face_cascade_name)){ printf("--(!)GPU OpenCL Error loading\n"); return -1; };
+	if (!cascade_ocl.load(face_cascade_name_CUDA)){ printf("--(!)GPU OpenCL Error loading\n"); return -1; };
 	double scale = 1.0;
 	detectAndDraw(imgGPU, cascade_ocl, nestedCascade, scale);
-
+	
 
 	//Code use CUDA
 
-	if (!face_cascade_gpu.load(face_cascade_name)){ printf("--(!)GPU CUDA Error loading\n"); return -1; };
+	if (!face_cascade_gpu.load(face_cascade_name_CUDA)){ printf("--(!)GPU CUDA Error loading\n"); return -1; };
 	detectAndDisplayGPUCUDA(imgGPUCUDA);
 	//detectAndDisplayGPU(img);
 
