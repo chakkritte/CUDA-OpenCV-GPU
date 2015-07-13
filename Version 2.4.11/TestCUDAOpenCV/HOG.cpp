@@ -7,26 +7,58 @@
 #include "opencv2/ocl/ocl.hpp"
 #include "opencv2/highgui/highgui.hpp"
 
-#define TEST_IMAGE "MyImages\\1.jpg"
+#define TEST_IMAGE1 "MyImages\\001.jpg"
+#define TEST_IMAGE2 "MyImages\\003.jpg"
+#define SIZEIMG 40
+
 
 using namespace std;
 using namespace cv;
 
 Mat get_hogdescriptor_visual_image(Mat& origImg, vector<float>& descriptorValues, Size winSize, Size cellSize, int scaleFactor, double viz_factor);
+float Distance(Mat A, Mat B);
+vector<float> HOGCompute(Mat img);
 
-void run()
+int main()
 {
-	Mat img_raw = imread(TEST_IMAGE, 1); // load as color image
+	Mat img_raw = imread(TEST_IMAGE1, 1); // load as color image
 
-	resize(img_raw, img_raw, Size(24, 24));
+	resize(img_raw, img_raw, Size(SIZEIMG, SIZEIMG));
 
 	Mat img;
 	cvtColor(img_raw, img, CV_RGB2GRAY);
 
-	//imshow("img", img);
-	//imwrite("test.jpg", img);
+	vector<float> descriptorsValues1 = HOGCompute(img);
+	Mat A(descriptorsValues1.size(), 1, CV_32FC1);
+	//copy vector to mat    
+	memcpy(A.data, descriptorsValues1.data(), descriptorsValues1.size()*sizeof(float));
 
-	HOGDescriptor d(Size(24, 24), Size(8, 8), Size(8, 8), Size(8, 8), 9);
+
+	Mat img_raw2 = imread(TEST_IMAGE2, 1); // load as color image
+	resize(img_raw2, img_raw2, Size(SIZEIMG, SIZEIMG));
+	Mat img2;
+	cvtColor(img_raw2, img2, CV_RGB2GRAY);
+	vector<float> descriptorsValues2 = HOGCompute(img2);
+	Mat B(descriptorsValues2.size(), 1, CV_32FC1);
+	//copy vector to mat    
+	memcpy(B.data, descriptorsValues2.data(), descriptorsValues2.size()*sizeof(float));
+
+	Mat visual1 = get_hogdescriptor_visual_image(img, descriptorsValues1, Size(SIZEIMG, SIZEIMG), Size(8, 8), 10, 1);
+	imshow("Test1", visual1);
+
+	Mat visual2 = get_hogdescriptor_visual_image(img2, descriptorsValues2, Size(SIZEIMG, SIZEIMG), Size(8, 8), 10, 1);
+	imshow("Test2", visual2);
+
+	Distance(A, B);
+
+	cv::waitKey(0);
+	return 0;
+}
+
+
+vector<float> HOGCompute(Mat img)
+{
+	HOGDescriptor d(Size(SIZEIMG, SIZEIMG), Size(8, 8), Size(8, 8), Size(8, 8), 9);
 
 	//HOGDescriptor d;
 	// Size(128,64), //winSize
@@ -53,13 +85,21 @@ void run()
 	cout << "img dimensions: " << img.cols << " width x " << img.rows << "height" << endl;
 	cout << "Found " << descriptorsValues.size() << " descriptor values" << endl;
 	cout << "Nr of locations specified : " << locations.size() << endl;
-
-	Mat visual = get_hogdescriptor_visual_image(img, descriptorsValues, Size(24, 24), Size(8, 8), 5, 1);
-
-	imshow("Test", visual);
-	cv::waitKey(0);
+	return descriptorsValues;
 }
 
+
+float Distance(Mat A, Mat B)
+{
+	//sum( sqrt( (A.-B)^2 ) )  
+	Mat C = A - B;
+	C = C.mul(C);
+	cv::sqrt(C, C);
+	cv::Scalar rr = cv::sum(C);
+	float rrr = rr(0);
+	cout << "Distance: " << rrr << endl;
+	return rrr;
+}
 
 // HOGDescriptor visual_imagealizer
 // adapted for arbitrary size of feature sets and training images

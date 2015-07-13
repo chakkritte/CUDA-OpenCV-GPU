@@ -3,7 +3,7 @@
 #define RUNOCL true
 #define haarcascade_DIR "haarcascades\\haarcascade_frontalface_alt2.xml"
 #define haarcascade_DIR_CUDA "haarcascades_cuda\\haarcascade_frontalface_alt2.xml"
-#define TEST_IMAGE "MyImages\\got1.jpg"
+#define TEST_IMAGE "MyImages\\test3.jpg"
 #define SIZE 20
 
 #include "opencv2/imgproc/imgproc.hpp"
@@ -438,7 +438,7 @@ static void detectMouth(Mat& img, vector<Rect_<int> >& mouth, string cascade_pat
 
 
 /** @function main */
-int main(int argc, const char *argv[])
+int run(int argc, const char *argv[])
 {
 
 	//cout << cv::getBuildInformation() << endl;
